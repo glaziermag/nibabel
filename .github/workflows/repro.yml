@@ -7,6 +7,9 @@ name: REPRO B - nilearn semantics restored
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - repro-b-fixed
 
 defaults:
   run:
