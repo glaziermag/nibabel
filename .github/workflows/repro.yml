@@ -1,0 +1,52 @@
+name: REPRO B - nilearn semantics restored
+
+# Minimal reproduction of nipy/nibabel .github/workflows/prerelease.yml at HEAD.
+# Every structural line below is copied verbatim from upstream; only the matrix
+# and the body of the "Run test suite" step are reduced so the run is fast and
+# its failure is deterministic. The point is the GATE SEMANTICS, nothing else.
+
+on:
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # FIX 1: job-level continue-on-error REMOVED (upstream prerelease.yml:36)
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run test suite
+        id: pre
+        continue-on-error: true      # FIX 1: moved to STEP level, as nilearn has it
+        run: |
+          echo "simulating the 2026-07-27 segfault: a real test failure"
+          exit 1
+      - name: Create issue
+        # Workflows triggered by schedule only notify the workflow creator
+        # So let's open an issue to make sure this is visible to all
+        if: ${{ steps.pre.outcome != 'success' }}      # upstream prerelease.yml:83
+        uses: JasonEtco/create-an-issue@1b14a70e4d8dc185e5cc76d3bec9eab20257b2c5 # v2.9.2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          run_id: ${{ github.run_id }}
+          repository: ${{ github.repository }}
+          workflow_name: PRE-RELEASE TESTS
+        with:
+          filename: .github/workflows/workflow_failure.md   # FIX 2: the path that exists
+          update_existing: true
+          search_existing: open
+      - name: Return failure
+        if: ${{ steps.pre.outcome != 'success' }}      # upstream prerelease.yml:95
+        run: exit 1
